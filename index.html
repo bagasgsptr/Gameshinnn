@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tebakan Cinta</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #ffe4ec, #ffd6e8);
+      text-align: center;
+      padding: 20px;
+      margin: 0;
+      color: #333;
+    }
+    .game-box {
+      background: white;
+      border-radius: 20px;
+      padding: 25px;
+      max-width: 500px;
+      margin: auto;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    h1, h2 {
+      color: #e91e63;
+      font-size: 26px;
+    }
+    .question {
+      font-size: 20px;
+      margin: 20px 0;
+    }
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 16px;
+      color: #d63384;
+    }
+    button {
+      background-color: #ff4081;
+      color: white;
+      border: none;
+      padding: 12px 18px;
+      margin: 10px 5px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    button:hover {
+      background-color: #e91e63;
+      transform: scale(1.05);
+    }
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    .timer-bar {
+      height: 10px;
+      background-color: #4caf50;
+      width: 100%;
+      transition: width 1s linear;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+    .result {
+      font-size: 22px;
+      margin-top: 20px;
+      color: #d63384;
+    }
+    #ending {
+      display: none;
+    }
+    #emojiRain span {
+      position: absolute;
+      pointer-events: none;
+      font-size: 30px;
+      animation: fall 3s linear forwards;
+    }
+    @keyframes fall {
+      to {
+        transform: translateY(100vh);
+        opacity: 0;
+      }
+    }
+    @media (max-width: 600px) {
+      button {
+        width: 100%;
+        margin: 6px 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-box">
+    <h1>💕 Tebakan Cinta 💕</h1>
+    <p>Jawab sebelum waktunya habis ya sayang 😘</p>
+    <div class="status-bar">
+      <div id="lives">❤️❤️❤️</div>
+      <div id="score">Skor: 0</div>
+    </div>
+    <div class="timer-bar" id="timerBar"></div>
+    <div id="game">
+      <div class="question" id="questionText">Pertanyaan akan muncul di sini</div>
+      <div id="answers"></div>
+    </div>
+    <div id="result" class="result"></div>
+    <div id="ending">
+      <h2 id="endingTitle">🥰</h2>
+      <p id="endingMessage"></p>
+      <div id="emojiRain"></div>
+      <button onclick="restartGame()">Main Lagi 💖</button>
+    </div>
+  </div>
+
+  <script>
+    const questions = [
+      { q: "Apa warna favorit aku?", options: ["Merah", "Hitam", "Biru", "Pink"], answer: "Hitam" },
+      { q: "Awal kita kenal di?", options: ["IG", "Mi chat", "Twitter", "TikTok"], answer: "IG" },
+      { q: "Apa makanan favorit aku?", options: ["Bakso", "Mie Ayam", "Pizza", "Sate"], answer: "Bakso" },
+      { q: "Siapa yang paling cemburuan?", options: ["Aku", "Kamu", "Dua-duanya", "Nggak Pernah Ngambek"], answer: "Kamu" },
+      { q: "Hal apa yang paling aku suka dari kamu?", options: ["Senyumnya", "Candanya", "Suaranya", "Semuanya 😍"], answer: "Semuanya 😍" }
+    ];
+
+    const endingMessages = [
+      "Kamu lucu banget sih, bisa bikin aku deg-degan tiap hari! 😚",
+      "Selamat kamu lulus ujian cinta 💕",
+      "Kamu cocok jadi detektif hatiku 🕵️‍♀️💘",
+      "Yahhh... kamu terlalu jago, bikin aku makin cinta! 😍",
+      "Kita emang jodoh ya? Skor kamu bukti cinta sejati 😘"
+    ];
+
+    let currentQuestion = 0;
+    let score = 0;
+    let lives = 3;
+    let timer;
+    const maxTime = 10;
+    let timeLeft = maxTime;
+
+    function loadQuestion() {
+      if (currentQuestion >= questions.length) return showResult();
+
+      const q = questions[currentQuestion];
+      document.getElementById("questionText").textContent = q.q;
+      const answersDiv = document.getElementById("answers");
+      answersDiv.innerHTML = "";
+
+      q.options.forEach(opt => {
+        const btn = document.createElement("button");
+        btn.textContent = opt;
+        btn.onclick = () => checkAnswer(opt, btn);
+        answersDiv.appendChild(btn);
+      });
+
+      timeLeft = maxTime;
+      updateTimerBar();
+      startTimer();
+    }
+
+    function startTimer() {
+      clearInterval(timer);
+      timer = setInterval(() => {
+        timeLeft--;
+        updateTimerBar();
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          loseLife("Waktu habis! 😵");
+        }
+      }, 1000);
+    }
+
+    function updateTimerBar() {
+      const width = (timeLeft / maxTime) * 100;
+      const bar = document.getElementById("timerBar");
+      bar.style.width = width + "%";
+      bar.style.backgroundColor = width < 30 ? "#f44336" : "#4caf50";
+    }
+
+    function checkAnswer(selected, btn) {
+      clearInterval(timer);
+      const correct = questions[currentQuestion].answer;
+      document.querySelectorAll("#answers button").forEach(b => b.disabled = true);
+
+      if (selected === correct) {
+        score++;
+        btn.style.backgroundColor = "#4caf50";
+      } else {
+        btn.style.backgroundColor = "#f44336";
+        return loseLife("Salah jawab! 😢");
+      }
+
+      document.getElementById("score").textContent = `Skor: ${score}`;
+      setTimeout(() => {
+        currentQuestion++;
+        loadQuestion();
+      }, 1000);
+    }
+
+    function loseLife(msg) {
+      lives--;
+      updateLivesDisplay();
+      if (lives <= 0) return endGame("Game Over! 💔");
+
+      document.getElementById("result").textContent = msg;
+      setTimeout(() => {
+        document.getElementById("result").textContent = "";
+        currentQuestion++;
+        loadQuestion();
+      }, 1000);
+    }
+
+    function updateLivesDisplay() {
+      document.getElementById("lives").textContent = "❤️".repeat(lives) + "🤍".repeat(3 - lives);
+    }
+
+    function showResult() {
+      document.getElementById("game").style.display = "none";
+      document.getElementById("ending").style.display = "block";
+      const randomMsg = endingMessages[Math.floor(Math.random() * endingMessages.length)];
+
+      document.getElementById("endingTitle").innerHTML = "💖 Selesai Main 💖";
+      document.getElementById("endingMessage").innerHTML = `Skor kamu ${score}/${questions.length}<br><br>${randomMsg}`;
+      rainEmojis(["💘", "💖", "💕", "😘"]);
+    }
+
+    function endGame(msg) {
+      document.getElementById("game").style.display = "none";
+      document.getElementById("ending").style.display = "block";
+      document.getElementById("endingTitle").innerText = "💔 Game Over!";
+      document.getElementById("endingMessage").innerHTML = `${msg}<br><br>Skor kamu ${score}/${questions.length} 😢`;
+      rainEmojis(["💔", "🥺", "😢"]);
+    }
+
+    function rainEmojis(emojis) {
+      const container = document.getElementById("emojiRain");
+      container.innerHTML = "";
+      for (let i = 0; i < 30; i++) {
+        const span = document.createElement("span");
+        span.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        span.style.left = Math.random() * 100 + "vw";
+        span.style.top = Math.random() * -100 + "px";
+        container.appendChild(span);
+      }
+    }
+
+    function restartGame() {
+      currentQuestion = 0;
+      score = 0;
+      lives = 3;
+      timeLeft = maxTime;
+      document.getElementById("ending").style.display = "none";
+      document.getElementById("game").style.display = "block";
+      document.getElementById("result").textContent = "";
+      document.getElementById("score").textContent = "Skor: 0";
+      updateLivesDisplay();
+      loadQuestion();
+    }
+
+    // Mulai game
+    updateLivesDisplay();
+    loadQuestion();
+  </script>
+</body>
+</html>
